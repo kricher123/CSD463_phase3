@@ -1,123 +1,130 @@
-import java.io.BufferedReader;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import gr.uoc.csd.hy463.Topic;
-import gr.uoc.csd.hy463.TopicType;
-import gr.uoc.csd.hy463.TopicsReader;
+
+import java.io.*;
+import java.util.*;
+import gr.uoc.csd.hy463.*;
+import java.util.stream.Collectors;
 
 public class searchEngine {
 
-
-    public static void topicRetrieval(){
+    public static void topicRetrieval() {
         ArrayList<Topic> topics = null;
         try {
-            topics = TopicsReader.readTopics("src\\CollectionIndex\\topics.xml");
+            topics = TopicsReader.readTopics("src/CollectionIndex/topics.xml");
         } catch (Exception e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
-        } 
-        // for (Topic topic : topics) { 
-        //     System.out.println(topic.getNumber()); 
-        //     System.out.println(topic.getType()); 
-        //     System.out.println(topic.getSummary()); 
-        //     System.out.println(topic.getDescription()); 
-        //     System.out.println("---------"); 
-        // }
-        Map<String, Double> Documents = null;
-        for(Topic topic: topics){
-            Documents = questionRetrieval(topic.getDescription(),topic.getType());
-            double max_score = 0;
-            String max_path = "";
-            for(Map.Entry<String , Double> entry : Documents.entrySet()){
-                Double score = entry.getValue();
-                String path = entry.getKey();
-                if(max_score<score){
-                    max_score = score;
-                    max_path = path;
-                }
-            }
-            System.out.println("Answer for Topic " + topic.getNumber() + " is: " + max_path + " with score of:" + max_score);
+            return;
         }
-        // for(Map.Entry<String , Double> entry : Documents.entrySet()){
-        //     System.out.println(entry.getKey() + " " + entry.getValue());
-        // }
+
+        ArrayList<String> outputLines = new ArrayList<>();
+        String runName = "";
+
+        for (Topic topic : topics) {
+            Map<String, Double> documents = questionRetrieval(topic.getDescription(), topic.getType());
+
+            List<Map.Entry<String, Double>> sortedDocs = new ArrayList<>(
+                    documents.entrySet()
+                            .stream()
+                            .sorted((e1, e2) -> Double.compare(e2.getValue(), e1.getValue()))
+                            .limit(1000)
+                            .collect(Collectors.toList())
+            );
+
+
+            int rank = 1;
+            for (Map.Entry<String, Double> entry : sortedDocs) {
+                String pmcid = extractPMCID(entry.getKey());
+                double score = entry.getValue();
+                String line = topic.getNumber() + " 0 " + pmcid + " " + rank + " " + score + " " + runName;
+                outputLines.add(line);
+                rank++;
+            }
+        }
+
+        writeResultsToFile(outputLines, "results.txt");
+    }
+
+    private static String extractPMCID(String path) {
+        File file = new File(path);
+        String name = file.getName();
+        int dotIndex = name.lastIndexOf('.');
+        return (dotIndex != -1) ? name.substring(0, dotIndex) : name;
+    }
+
+    private static void writeResultsToFile(List<String> lines, String filename) {
+        try ( BufferedWriter writer = new BufferedWriter(new FileWriter(filename))) {
+            for (String line : lines) {
+                writer.write(line);
+                writer.newLine();
+            }
+            System.out.println("Successfully saved " + filename);
+        } catch (IOException e) {
+            System.err.println("Error while creating " + filename);
+            e.printStackTrace();
+        }
     }
 
     public static ArrayList<String> readStopWords() {
         ArrayList<String> ret = new ArrayList<>();
-        FileReader FileInEn;
         try {
-            FileInEn = new FileReader("src\\Stopwords\\stopwordsEn.txt");
-            FileReader FileInGr = new FileReader("src\\Stopwords\\stopwordsGr.txt");
-            BufferedReader reader = new BufferedReader(FileInEn);
-            String tmp = reader.readLine();
-            while (tmp != null) {
-                ret.add(tmp);
-                tmp = reader.readLine();
+            BufferedReader en = new BufferedReader(new FileReader("src/Stopwords/stopwordsEn.txt"));
+            BufferedReader gr = new BufferedReader(new FileReader("src/Stopwords/stopwordsGr.txt"));
+            String tmp;
+            while ((tmp = en.readLine()) != null) {
+                ret.add(tmp.trim());
             }
-            reader = new BufferedReader(FileInGr);
-            tmp = reader.readLine();
-            while (tmp != null) {
-                ret.add(tmp);
-                tmp = reader.readLine();
+            while ((tmp = gr.readLine()) != null) {
+                ret.add(tmp.trim());
             }
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
+            en.close();
+            gr.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
         return ret;
     }
 
-    static String editQuery(String query) {
+    public static String editQuery(String query) {
         ArrayList<String> stopwords = readStopWords();
         query = query.toLowerCase().replaceAll("\\p{Punct}", " ");
-        String[] tokens = query.split("\s+");
+        String[] tokens = query.split("\\s+");
         StringBuilder cleaned = new StringBuilder();
-
         for (String token : tokens) {
             if (!stopwords.contains(token) && !token.isBlank()) {
                 String stemmed = Utilities.stem(token);
                 cleaned.append(stemmed).append(" ");
             }
         }
-
         return cleaned.toString().trim();
     }
 
-    public static Map<String,Double> questionRetrieval(String line, TopicType category){
-        String categoryString = category.toString();
+    public static Map<String, Double> questionRetrieval(String query, TopicType category) {
         ArrayList<Word> words = Utilities.read_words();
-        String query = new String(line);
-
         String clean_query = editQuery(query);
-        //System.out.println(clean_query);
-
-        String[] query_terms = clean_query.split("\s+");
-        Map<Integer, Double> documentScores = new HashMap<>();
-        Map<String, Double> Ret = new HashMap<>();
+        String[] query_terms = clean_query.split("\\s+");
+        Map<Integer, Double> docScores = new HashMap<>();
+        Map<String, Double> results = new HashMap<>();
 
         for (String term : query_terms) {
             ArrayList<Word> postings = Utilities.get_word(term, words);
             for (Word w : postings) {
-                documentScores.put(w.PMID, documentScores.getOrDefault(w.PMID, 0.0) + w.weight);
+                docScores.put(w.PMID, docScores.getOrDefault(w.PMID, 0.0) + w.weight);
             }
         }
 
-        //System.out.println("Vector Space Model Results:");
-        documentScores.entrySet().stream()
-                .sorted((e1, e2) -> Double.compare(e2.getValue(), e1.getValue()))
+        docScores.entrySet()
+                .stream()
+                .sorted((a, b) -> Double.compare(b.getValue(), a.getValue()))
                 .forEach(entry -> {
                     int pmid = entry.getKey();
                     double score = entry.getValue();
-                    String path = words.stream().filter(w -> w.PMID == pmid).findFirst().map(w -> w.path).orElse("Unknown");
-                    //System.out.println("Document: " + path + " | Score: " + score);
-                    Ret.put(path , score);
+                    String path = words.stream()
+                            .filter(w -> w.PMID == pmid)
+                            .findFirst()
+                            .map(w -> w.path)
+                            .orElse("Unknown");
+                    results.put(path, score);
                 });
-        return Ret;
+
+        return results;
     }
 }
