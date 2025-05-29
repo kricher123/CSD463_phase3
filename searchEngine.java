@@ -58,8 +58,7 @@ public class searchEngine {
             }
             System.out.println("Successfully saved " + filename);
         } catch (IOException e) {
-            System.err.println("Error while creating " + filename);
-            e.printStackTrace();
+           System.out.println("Error while creating " + filename);
         }
     }
 
