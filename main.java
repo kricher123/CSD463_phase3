@@ -4,6 +4,9 @@ public class main {
     public static void main(String[] args) throws Exception {
         long startTime = System.nanoTime();
         searchEngine.topicRetrieval();
+        searchEngine.analyzeRelevanceByTopicType();
+
+
         Results.print_results();
         long endTime = System.nanoTime();
         long duration = endTime - startTime;
