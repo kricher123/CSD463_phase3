@@ -5,11 +5,6 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import javax.swing.JFrame;
-import org.jfree.chart.ChartFactory;
-import org.jfree.chart.ChartPanel;
-import org.jfree.chart.JFreeChart;
-import org.jfree.data.category.DefaultCategoryDataset;
 
 public class Results {
 
@@ -56,25 +51,7 @@ public class Results {
         System.out.println("Relevant found: " + relevant);
         System.out.println("Irrelevant found: " + irrelevant);
         System.out.println("Unknown (not in qrels): " + unknown);
-        createBarChart(relevant, irrelevant, unknown);
+
     }
 
-    public static void createBarChart(int relevant, int irrelevant, int unknown) {
-        DefaultCategoryDataset dataset = new DefaultCategoryDataset();
-        dataset.addValue(relevant, "Results", "Relevant");
-        dataset.addValue(irrelevant, "Results", "Irrelevant");
-
-        JFreeChart barChart = ChartFactory.createBarChart(
-                "Document Relevance Statistics",
-                "Category",
-                "Count",
-                dataset
-        );
-
-        JFrame frame = new JFrame("Results Chart");
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.add(new ChartPanel(barChart));
-        frame.setSize(600, 400);
-        frame.setVisible(true);
-    }
 }
