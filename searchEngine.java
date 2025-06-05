@@ -137,7 +137,6 @@ public class searchEngine {
             ArrayList<Topic> topics = TopicsReader.readTopics("src/CollectionIndex/topics.xml");
             for (Topic topic : topics) {
                 topicTypeMap.put(String.valueOf(topic.getNumber()), topic.getType());
-
             }
 
             Map<String, Integer> qrels = new HashMap<>();
@@ -176,6 +175,7 @@ public class searchEngine {
                     }
                 }
             }
+
             System.out.println("Relevance Distribution by Topic Type");
             Set<TopicType> allTypes = new HashSet<>();
             allTypes.addAll(relevantCounts.keySet());
@@ -184,8 +184,12 @@ public class searchEngine {
             for (TopicType type : allTypes) {
                 int rel = relevantCounts.getOrDefault(type, 0);
                 int irrel = irrelevantCounts.getOrDefault(type, 0);
-                System.out.printf("%-10s → Relevant: %4d | Irrelevant: %4d%n", type.toString(), rel, irrel);
+                int total = rel + irrel;
 
+                double percentage = total > 0 ? (rel * 100.0) / total : 0.0;
+
+                System.out.printf("%-10s → Relevant: %4d | Irrelevant: %4d | %.2f%% Relevant%n",
+                        type.toString(), rel, irrel, percentage);
             }
 
             topicBarChart(relevantCounts, irrelevantCounts);
@@ -194,6 +198,7 @@ public class searchEngine {
             e.printStackTrace();
         }
     }
+
 
     public static void topicBarChart(Map<TopicType, Integer> relevantCounts, Map<TopicType, Integer> irrelevantCounts) {
         DefaultCategoryDataset dataset = new DefaultCategoryDataset();
@@ -223,6 +228,5 @@ public class searchEngine {
         frame.setSize(800, 500);
         frame.setVisible(true);
     }
-
 
 }
