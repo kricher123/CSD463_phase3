@@ -63,7 +63,6 @@ public class Results {
         DefaultCategoryDataset dataset = new DefaultCategoryDataset();
         dataset.addValue(relevant, "Results", "Relevant");
         dataset.addValue(irrelevant, "Results", "Irrelevant");
-        dataset.addValue(unknown, "Results", "Unknown");
 
         JFreeChart barChart = ChartFactory.createBarChart(
                 "Document Relevance Statistics",
